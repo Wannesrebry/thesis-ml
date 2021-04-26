@@ -5,7 +5,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
 
-app = flask.Flask(__name__)
+app = flask.Flask(__name__, static_url_path='/static', static_folder='upload')
 app.config["DEBUG"] = True
 cors = CORS(app)
 
@@ -36,9 +36,8 @@ def upload_initial_train_data():
             project_name = request.values.get('name')
             if f:
                 try:
-                    filename = secure_filename(f.filename)
                     os.mkdir(f'./upload/{project_name}')
-                    f.save(os.path.join(f"./upload/{project_name}", filename))
+                    f.save(os.path.join(f"./upload/{project_name}", 'upload_train.csv'))
                     return flask.jsonify(
                         ProjectName=project_name,
                         Message="Project Creation was successful"
