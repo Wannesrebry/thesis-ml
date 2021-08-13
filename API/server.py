@@ -5,7 +5,15 @@ import flask
 import requests
 from flask_cors import CORS
 import os
+import createValueDictionary
+
+from pandas import array
+
+from API import DataCleaning
 from user import *
+
+import pandas as pd
+
 app = flask.Flask(__name__, static_url_path='/static', static_folder='upload')
 
 app.config["DEBUG"] = True
@@ -81,6 +89,49 @@ def upload_initial_train_data():
             return flask.jsonify(Message='No file found'), 400
     except Exception as e:
         return e
+
+
+@app.route('/api/get', methods=['GET'])
+def get_project():
+    try:
+        # Auth
+        user, user_status_code = authenticate(flask.request)
+        if user_status_code != 200:
+            return str(user), 401
+        # --
+        return '', 200
+    except Exception as ex:
+        return str(ex), 404
+
+
+@app.route('/api/generate_train_data', methods=['POST'])
+def generate_train_data():
+    try:
+        # Auth
+        user, user_status_code = authenticate(flask.request)
+        if user_status_code != 200:
+            return str(user), 401
+        # --
+        project = flask.request.values.get('project')
+        project_dir = f"/upload/{user.email}/{project}"
+        df = pd.read_csv('./' + project_dir + '/upload_train.csv', sep=';')
+
+        dictor = createValueDictionary.createDataFrame(df)
+        f = open(f"./{project_dir}" + "/dict.json", "w")
+        f.write(str(dictor))
+        f.close()
+        '''
+            dict_test = eval(str(open(f"./{project_dir}" + "/dict.json", "r").read()))
+            print(dict_test['AutoID'])
+        '''
+        cleaned_df = DataCleaning.createDataFrame(df, dictor, ignore=['AutoID'])
+        cleaned_df.index = cleaned_df['AutoID']
+        del cleaned_df['AutoID']
+        cleaned_df.to_csv(f'./{project_dir}/cleaned_train.csv')
+
+        return flask.jsonify(Columns=df.columns.values.tolist()), 200
+    except Exception as ex:
+        return flask.jsonify(Message=ex), 400
 
 
 if __name__ == '__main__':
